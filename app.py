@@ -1,20 +1,15 @@
-#!/usr/bin/env python3
 import streamlit as st
 from io import StringIO
 from langchain.prompts import PromptTemplate
 from langchain.llms import OpenAI
 from langchain.chains import LLMChain
-import os
 from docx import Document
+import os
 
-# Set your OpenAI API key
 api_key = st.secrets["OPENAI_API_KEY"]
-# api_key = os.getenv("OPENAI_API_KEY")
 
-# Function to generate a user story with acceptance criteria
 def generate_precise_user_story(prompt, brd_content=None):
-    llm = OpenAI(temperature=0.5)
-
+    llm = OpenAI(temperature=0.5, model_name="gpt-3.5-turbo", openai_api_key=api_key)
     user_story_template = """
         Generate a detailed user story with the following format:
         User Story for {feature_name}
@@ -30,7 +25,7 @@ def generate_precise_user_story(prompt, brd_content=None):
         7. Responsive Design: Ensure login works seamlessly on both desktop and mobile.
         8. Security Measures: Implement CAPTCHA after multiple login attempts, and ensure secure password handling.
         """
-
+    
     chain = LLMChain(llm=llm, prompt=PromptTemplate(input_variables=["feature_name", "title", "user", "feature", "goal"], template=user_story_template))
 
     user_story = chain.run({
@@ -43,8 +38,7 @@ def generate_precise_user_story(prompt, brd_content=None):
     return user_story.strip()
 
 def generate_email_template(prompt):
-    llm = OpenAI(temperature=0.5)
-
+    llm = OpenAI(temperature=0.5, model_name="gpt-3.5-turbo", openai_api_key=api_key)
     email_template = """
         Write a formal email based on the following details:
         {details}
@@ -57,7 +51,6 @@ def generate_email_template(prompt):
 def detect_response_type(prompt):
     keywords_user_story = ["user story", "acceptance criteria", "feature", "As a", "so that"]
     keywords_email = ["email", "subject", "greeting", "template"]
-
     if any(keyword in prompt.lower() for keyword in keywords_user_story):
         return "User Story"
     elif any(keyword in prompt.lower() for keyword in keywords_email):
@@ -74,10 +67,7 @@ def is_valid_input(prompt):
         return False
     keywords_user_story = ["user story", "acceptance criteria", "feature", "As a", "so that"]
     keywords_email = ["email", "subject", "greeting", "template"]
-
-    if any(keyword in prompt.lower() for keyword in keywords_user_story + keywords_email):
-        return True
-    return False
+    return any(keyword in prompt.lower() for keyword in keywords_user_story + keywords_email)
 
 st.title('AI Chat')
 
@@ -88,15 +78,9 @@ user_input = st.chat_input("Type your requirement here...")
 
 if user_input:
     st.session_state.messages.append({"role": "user", "content": user_input})
-
     if is_valid_input(user_input):
         response_type = detect_response_type(user_input)
-
-        if response_type == "User Story":
-            response = generate_precise_user_story(user_input)
-        else:
-            response = generate_email_template(user_input)
-
+        response = generate_precise_user_story(user_input) if response_type == "User Story" else generate_email_template(user_input)
         st.session_state.messages.append({"role": "assistant", "content": response})
     else:
         st.session_state.messages.append({"role": "assistant", "content": "Please provide a more detailed requirement, such as a user story or email template request."})
