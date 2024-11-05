@@ -69,7 +69,7 @@ def is_valid_input(prompt):
     keywords_email = ["email", "subject", "greeting", "template"]
     return any(keyword in prompt.lower() for keyword in keywords_user_story + keywords_email)
 
-st.title('AI Chat')
+st.title('AI Gene')
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
