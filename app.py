@@ -1,15 +1,25 @@
 import streamlit as st
-from io import StringIO
 from langchain.prompts import PromptTemplate
 from langchain.llms import OpenAI
 from langchain.chains import LLMChain
 from docx import Document
 import os
 
-
 api_key = st.secrets["OPENAI_API_KEY"]
 
+
+st.image("image.png", width=150)  
+#st.title('BA Genie')
+
 def generate_precise_user_story(prompt, brd_content=None):
+    
+    if "existing customer" in prompt.lower() or "login" in prompt.lower():
+        user_role = "existing customer"
+    elif "new customer" in prompt.lower() or "sign up" in prompt.lower():
+        user_role = "new customer"
+    else:
+        user_role = "user"  # Default to a generic "user" if no specific role is detected
+    
     llm = OpenAI(temperature=0.5, model_name="gpt-3.5-turbo", openai_api_key=api_key)
     user_story_template = """
         Generate a detailed user story with the following format:
@@ -27,14 +37,21 @@ def generate_precise_user_story(prompt, brd_content=None):
         8. Security Measures: Implement CAPTCHA after multiple login attempts, and ensure secure password handling.
         """
     
-    chain = LLMChain(llm=llm, prompt=PromptTemplate(input_variables=["feature_name", "title", "user", "feature", "goal"], template=user_story_template))
+    chain = LLMChain(
+        llm=llm, 
+        prompt=PromptTemplate(
+            input_variables=["feature_name", "title", "user", "feature", "goal"], 
+            template=user_story_template
+        )
+    )
 
+    # Run chain with dynamic user role
     user_story = chain.run({
         "feature_name": "E-commerce Website Login Page",
-        "title": "Existing Customer Login to Access Profile",
-        "user": "existing customer",
-        "feature": "log into the e-commerce website",
-        "goal": "access my profile and manage my account details"
+        "title": f"{user_role.capitalize()} Login to Access Profile",
+        "user": user_role,
+        "feature": "log into the e-commerce website" if user_role == "existing customer" else "sign up for an account",
+        "goal": "access my profile and manage my account details" if user_role == "existing customer" else "create a new account and start shopping"
     })
     return user_story.strip()
 
@@ -55,7 +72,7 @@ def detect_response_type(prompt):
     if any(keyword in prompt.lower() for keyword in keywords_user_story):
         return "User Story"
     elif any(keyword in prompt.lower() for keyword in keywords_email):
-        return "Email Template"
+        return "Email Template"# Detect user role based on prompt keywords
     return "User Story"
 
 def save_as_word(content, filename):
@@ -69,9 +86,6 @@ def is_valid_input(prompt):
     keywords_user_story = ["user story", "acceptance criteria", "feature", "As a", "so that"]
     keywords_email = ["email", "subject", "greeting", "template"]
     return any(keyword in prompt.lower() for keyword in keywords_user_story + keywords_email)
-
-#st.title('BA Genie')
-st.image("image.png", width=150)
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
