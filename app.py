@@ -8,7 +8,7 @@ import os
 api_key = st.secrets["OPENAI_API_KEY"]
 
 
-st.image("image.png", width=150)  
+st.image("logo.jpg", width=150)  
 #st.title('BA Genie')
 
 def generate_precise_user_story(prompt, brd_content=None):
