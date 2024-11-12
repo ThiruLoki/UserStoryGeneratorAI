@@ -70,7 +70,7 @@ def is_valid_input(prompt):
     keywords_email = ["email", "subject", "greeting", "template"]
     return any(keyword in prompt.lower() for keyword in keywords_user_story + keywords_email)
 
-st.title('BA Genie')
+#st.title('BA Genie')
 st.image("image.png", width=150)
 
 if "messages" not in st.session_state:
