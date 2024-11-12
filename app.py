@@ -6,6 +6,7 @@ from langchain.chains import LLMChain
 from docx import Document
 import os
 
+
 api_key = st.secrets["OPENAI_API_KEY"]
 
 def generate_precise_user_story(prompt, brd_content=None):
@@ -70,6 +71,7 @@ def is_valid_input(prompt):
     return any(keyword in prompt.lower() for keyword in keywords_user_story + keywords_email)
 
 st.title('BA Genie')
+st.image("image.png", width=150)
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
