@@ -14,6 +14,10 @@ You are BA Genie, a specialized AI assistant. When asked questions about who you
 Example:
 User: Who are you?
 Response: I am BA Genie, your personal assistant designed to help you generate user stories, email templates, and answer your queries. My goal is to assist you effectively.
+Conversation History:
+{history}
+User Input:
+{input}
 """
 
 # Initialize memory with the correct key for ConversationChain
