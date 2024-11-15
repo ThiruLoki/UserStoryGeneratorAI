@@ -1,140 +1,113 @@
 import streamlit as st
-from langchain.chains import ConversationChain
-from langchain.llms import OpenAI
-from langchain.memory import ConversationBufferMemory
 from langchain.prompts import PromptTemplate
+from langchain.llms import OpenAI
+from langchain.chains import LLMChain
 from docx import Document
+import os
 
-# Load API key from Streamlit secrets
 api_key = st.secrets["OPENAI_API_KEY"]
 
-# Define a custom identity prompt
-identity_prompt_template = """
-You are BA Genie, a specialized AI assistant. When asked questions about who you are, your name, or your purpose, always respond by introducing yourself as BA Genie. 
-If the user asks about a previous message, recall their earlier input using the conversation history.
-Example:
-Conversation History:
-{history}
-User Input:
-{input}
-"""
 
-# Initialize memory with the correct key for ConversationChain
-memory = ConversationBufferMemory(memory_key="history", return_messages=True)
+st.image("logo.jpg", width=600)  
+#st.title('BA Genie')
 
-# Identity-related conversation chain
-identity_chain = ConversationChain(
-    llm=OpenAI(model_name="gpt-3.5-turbo", openai_api_key=api_key),
-    memory=memory,
-    prompt=PromptTemplate(
-        template=identity_prompt_template,
-        input_variables=["history", "input"],
-    ),
-)
-
-# Function to generate user stories
-def generate_precise_user_story(prompt):
-    """
-    Generate a user story based on the input prompt.
-    """
-    user_story_prompt_template = """
-    Generate a detailed user story with the following format:
-    Title: {title}
-    As a {user}, I want to {feature}, so that {goal}.
-    Acceptance Criteria:
-    1. Clearly state the conditions for success.
-    2. Define edge cases to consider.
-    """
-    llm = OpenAI(model_name="gpt-3.5-turbo", openai_api_key=api_key)
-    story_chain = ConversationChain(
-        llm=llm,
+def generate_precise_user_story(prompt, brd_content=None):
+    
+    if "existing customer" in prompt.lower() or "login" in prompt.lower():
+        user_role = "existing customer"
+    elif "new customer" in prompt.lower() or "sign up" in prompt.lower():
+        user_role = "new customer"
+    else:
+        user_role = "user"  # Default to a generic "user" if no specific role is detected
+    
+    llm = OpenAI(temperature=0.5, model_name="gpt-3.5-turbo", openai_api_key=api_key)
+    user_story_template = """
+        Generate a detailed user story with the following format:
+        User Story for {feature_name}
+        Title: {title}
+        As an {user}, I want to {feature}, so that {goal}.
+        Acceptance Criteria:
+        1. Login Form: The login page should have both email and password fields, along with a submit button.
+        2. Input Validation: Ensure users receive an error for incorrect email or password. Validate email format.
+        3. Forgot Password Option: Provide a link to initiate password recovery.
+        4. Session Management: Users should stay logged in unless they explicitly log out.
+        5. Redirect on Successful Login: After login, users should be redirected to their profile or last visited page.
+        6. Access Control: Users must log in before accessing any account-related features.
+        7. Responsive Design: Ensure login works seamlessly on both desktop and mobile.
+        8. Security Measures: Implement CAPTCHA after multiple login attempts, and ensure secure password handling.
+        """
+    
+    chain = LLMChain(
+        llm=llm, 
         prompt=PromptTemplate(
-            template=user_story_prompt_template,
-            input_variables=["title", "user", "feature", "goal"],
-        ),
+            input_variables=["feature_name", "title", "user", "feature", "goal"], 
+            template=user_story_template
+        )
     )
-    return story_chain.run(
-        {
-            "title": "E-commerce User Login",
-            "user": "customer",
-            "feature": "log into my account",
-            "goal": "access my purchase history",
-        }
-    ).strip()
 
-# Function to generate email templates
+    # Run chain with dynamic user role
+    user_story = chain.run({
+        "feature_name": "E-commerce Website Login Page",
+        "title": f"{user_role.capitalize()} Login to Access Profile",
+        "user": user_role,
+        "feature": "log into the e-commerce website" if user_role == "existing customer" else "sign up for an account",
+        "goal": "access my profile and manage my account details" if user_role == "existing customer" else "create a new account and start shopping"
+    })
+    return user_story.strip()
+
 def generate_email_template(prompt):
-    """
-    Generate an email template based on the input prompt.
-    """
-    email_template_prompt_template = """
-    Write a professional email based on the following details:
-    {details}
-    """
-    llm = OpenAI(model_name="gpt-3.5-turbo", openai_api_key=api_key)
-    email_chain = ConversationChain(
-        llm=llm,
-        prompt=PromptTemplate(
-            template=email_template_prompt_template,
-            input_variables=["details"],
-        ),
-    )
-    return email_chain.run({"details": prompt}).strip()
+    llm = OpenAI(temperature=0.5, model_name="gpt-3.5-turbo", openai_api_key=api_key)
+    email_template = """
+        Write a formal email based on the following details:
+        {details}
+        """
+    
+    chain = LLMChain(llm=llm, prompt=PromptTemplate(input_variables=["details"], template=email_template))
+    email_response = chain.run({"details": prompt})
+    return email_response.strip()
 
-# Initialize session state for messages
+def detect_response_type(prompt):
+    keywords_user_story = ["user story", "acceptance criteria", "feature", "As a", "so that"]
+    keywords_email = ["email", "subject", "greeting", "template"]
+    if any(keyword in prompt.lower() for keyword in keywords_user_story):
+        return "User Story"
+    elif any(keyword in prompt.lower() for keyword in keywords_email):
+        return "Email Template"# Detect user role based on prompt keywords
+    return "User Story"
+
+def save_as_word(content, filename):
+    doc = Document()
+    doc.add_paragraph(content)
+    doc.save(filename)
+
+def is_valid_input(prompt):
+    if len(prompt) < 10:
+        return False
+    keywords_user_story = ["user story", "acceptance criteria", "feature", "As a", "so that"]
+    keywords_email = ["email", "subject", "greeting", "template"]
+    return any(keyword in prompt.lower() for keyword in keywords_user_story + keywords_email)
+
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# Display app logo
-st.image("logo.jpg", width=600)
-
-# Capture user input
 user_input = st.chat_input("Type your requirement here...")
 
 if user_input:
-    # Add user input to session state messages
     st.session_state.messages.append({"role": "user", "content": user_input})
-
-    # Generate a response based on the input type
-    if "user story" in user_input.lower():
-        response = generate_precise_user_story(user_input)
-    elif "email" in user_input.lower():
-        response = generate_email_template(user_input)
+    if is_valid_input(user_input):
+        response_type = detect_response_type(user_input)
+        response = generate_precise_user_story(user_input) if response_type == "User Story" else generate_email_template(user_input)
+        st.session_state.messages.append({"role": "assistant", "content": response})
     else:
-        # Handle identity or general conversation
-        response = identity_chain.run(input=user_input)
+        st.session_state.messages.append({"role": "assistant", "content": "Please provide a more detailed requirement, such as a user story or email template request."})
 
-    # Add the response to session state messages
-    st.session_state.messages.append({"role": "assistant", "content": response})
-
-# Display chat history
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-# Offer file download options for the last response
 if len(st.session_state.messages) > 0:
     last_response = st.session_state.messages[-1]["content"]
-
-    # Download as Text
-    st.download_button(
-        label="Download Last Response as Text",
-        data=last_response,
-        file_name="response.txt",
-        mime="text/plain",
-    )
-
-    # Download as Word document
-    def save_as_word(content, filename):
-        doc = Document()
-        doc.add_paragraph(content)
-        doc.save(filename)
-
+    st.download_button(f"Download Last Response as Text", last_response, file_name="response.txt", mime='text/plain')
     save_as_word(last_response, "response.docx")
     with open("response.docx", "rb") as docx_file:
-        st.download_button(
-            label="Download Last Response as Word",
-            data=docx_file,
-            file_name="response.docx",
-            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        )
+        st.download_button(f"Download Last Response as Word", docx_file, file_name="response.docx", mime='application/vnd.openxmlformats-officedocument.wordprocessingml.document')
