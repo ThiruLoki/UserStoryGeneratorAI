@@ -71,21 +71,34 @@ def generate_email_template(prompt):
     email_response = chain.run({"details": prompt})
     return email_response.strip()
 
+def generate_general_query_response(prompt):
+    """
+    Generate a response for general user queries.
+    """
+    llm = OpenAI(temperature=0.7, model_name="gpt-3.5-turbo", openai_api_key=api_key)
+    general_template = """
+        Provide a helpful, detailed, and informative response to the following user query:
+        {query}
+    """
+    chain = LLMChain(
+        llm=llm,
+        prompt=PromptTemplate(input_variables=["query"], template=general_template)
+    )
+    general_response = chain.run({"query": prompt})
+    return general_response.strip()
+
 def detect_response_type(prompt):
     """
     Detect the type of response based on keywords or general input structure.
     """
     keywords_user_story = ["user story", "acceptance criteria", "feature", "As a", "so that"]
     keywords_email = ["email", "subject", "greeting", "template"]
-    keywords_flowchart = ["flow chart", "diagram", "process", "flow"]
     casual_keywords = ["hello", "hi", "hey", "how are you", "what's up", "greetings"]
 
     if any(keyword in prompt.lower() for keyword in keywords_user_story):
         return "User Story"
     elif any(keyword in prompt.lower() for keyword in keywords_email):
         return "Email Template"
-    elif any(keyword in prompt.lower() for keyword in keywords_flowchart):
-        return "Flow Chart"
     elif any(keyword in prompt.lower() for keyword in casual_keywords):
         return "Casual"
     return "General"
@@ -98,10 +111,10 @@ def generate_response(prompt, response_type):
         return generate_precise_user_story(prompt)
     elif response_type == "Email Template":
         return generate_email_template(prompt)
-    elif response_type == "Flow Chart":
-        return "Sure, I can create a flowchart for the process you've described. Please provide more details."
     elif response_type == "Casual":
         return "Hello! How can I assist you today? 😊"
+    elif response_type == "General":
+        return generate_general_query_response(prompt)
     else:
         return "I'm here to help! Could you clarify your request, or let me know what you need assistance with?"
 
