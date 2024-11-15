@@ -2,12 +2,13 @@ import streamlit as st
 from langchain.chains import ConversationChain
 from langchain.llms import OpenAI
 from langchain.memory import ConversationBufferMemory
+from docx import Document
 
 # Load API key from Streamlit secrets
 api_key = st.secrets["OPENAI_API_KEY"]
 
-# Initialize memory
-memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
+# Initialize memory with the correct key for ConversationChain
+memory = ConversationBufferMemory(memory_key="history", return_messages=True)
 
 # Initialize conversation chain with memory
 conversation = ConversationChain(
@@ -19,7 +20,7 @@ conversation = ConversationChain(
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# Display logo
+# Display app logo
 st.image("logo.jpg", width=600)
 
 # Capture user input
@@ -43,6 +44,8 @@ for message in st.session_state.messages:
 # Offer file download options for the last response
 if len(st.session_state.messages) > 0:
     last_response = st.session_state.messages[-1]["content"]
+
+    # Download as Text
     st.download_button(
         label="Download Last Response as Text", 
         data=last_response, 
@@ -50,8 +53,7 @@ if len(st.session_state.messages) > 0:
         mime="text/plain"
     )
 
-    # Save as Word document
-    from docx import Document
+    # Download as Word document
     def save_as_word(content, filename):
         doc = Document()
         doc.add_paragraph(content)
