@@ -93,11 +93,14 @@ def detect_response_type(prompt):
     """
     keywords_user_story = ["user story", "acceptance criteria", "feature", "As a", "so that"]
     keywords_email = ["email", "subject", "greeting", "template"]
+    identity_keywords = ["who are you", "what is your name", "identify yourself"]
 
     if any(keyword in prompt.lower() for keyword in keywords_user_story):
         return "User Story"
     elif any(keyword in prompt.lower() for keyword in keywords_email):
         return "Email Template"
+    elif any(keyword in prompt.lower() for keyword in identity_keywords):
+        return "Identity"
     return "General"
 
 def generate_response(prompt, response_type):
@@ -108,6 +111,8 @@ def generate_response(prompt, response_type):
         return generate_precise_user_story(prompt)
     elif response_type == "Email Template":
         return generate_email_template(prompt)
+    elif response_type == "Identity":
+        return "I am BA Genie, your personal assistant designed to help you generate user stories, email templates, and answer your queries effectively. How can I assist you further?"
     else:
         # For all other queries, use a general-purpose prompt
         return generate_general_query_response(prompt)
