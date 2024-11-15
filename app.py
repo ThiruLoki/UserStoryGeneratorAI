@@ -9,11 +9,10 @@ from docx import Document
 api_key = st.secrets["OPENAI_API_KEY"]
 
 # Define a custom identity prompt
-identity_prompt = """
+identity_prompt_template = """
 You are BA Genie, a specialized AI assistant. When asked questions about who you are, your name, or your purpose, always respond by introducing yourself as BA Genie. 
+If the user asks about a previous message, recall their earlier input using the conversation history.
 Example:
-User: Who are you?
-Response: I am BA Genie, your personal assistant designed to help you generate user stories, email templates, and answer your queries. My goal is to assist you effectively.
 Conversation History:
 {history}
 User Input:
@@ -23,26 +22,22 @@ User Input:
 # Initialize memory with the correct key for ConversationChain
 memory = ConversationBufferMemory(memory_key="history", return_messages=True)
 
-# Initialize conversation chain with memory and custom identity prompt
-conversation = ConversationChain(
+# Identity-related conversation chain
+identity_chain = ConversationChain(
     llm=OpenAI(model_name="gpt-3.5-turbo", openai_api_key=api_key),
     memory=memory,
     prompt=PromptTemplate(
-        template=identity_prompt,
-        input_variables=["history", "input"]
+        template=identity_prompt_template,
+        input_variables=["history", "input"],
     ),
 )
 
-# Initialize session state for messages
-if "messages" not in st.session_state:
-    st.session_state.messages = []
-
-# Functions for User Story and Email Template generation
+# Function to generate user stories
 def generate_precise_user_story(prompt):
     """
     Generate a user story based on the input prompt.
     """
-    user_story_prompt = """
+    user_story_prompt_template = """
     Generate a detailed user story with the following format:
     Title: {title}
     As a {user}, I want to {feature}, so that {goal}.
@@ -51,14 +46,14 @@ def generate_precise_user_story(prompt):
     2. Define edge cases to consider.
     """
     llm = OpenAI(model_name="gpt-3.5-turbo", openai_api_key=api_key)
-    chain = ConversationChain(
+    story_chain = ConversationChain(
         llm=llm,
         prompt=PromptTemplate(
-            template=user_story_prompt,
+            template=user_story_prompt_template,
             input_variables=["title", "user", "feature", "goal"],
         ),
     )
-    return chain.run(
+    return story_chain.run(
         {
             "title": "E-commerce User Login",
             "user": "customer",
@@ -67,25 +62,28 @@ def generate_precise_user_story(prompt):
         }
     ).strip()
 
-
+# Function to generate email templates
 def generate_email_template(prompt):
     """
     Generate an email template based on the input prompt.
     """
-    email_template_prompt = """
+    email_template_prompt_template = """
     Write a professional email based on the following details:
     {details}
     """
     llm = OpenAI(model_name="gpt-3.5-turbo", openai_api_key=api_key)
-    chain = ConversationChain(
+    email_chain = ConversationChain(
         llm=llm,
         prompt=PromptTemplate(
-            template=email_template_prompt,
+            template=email_template_prompt_template,
             input_variables=["details"],
         ),
     )
-    return chain.run({"details": prompt}).strip()
+    return email_chain.run({"details": prompt}).strip()
 
+# Initialize session state for messages
+if "messages" not in st.session_state:
+    st.session_state.messages = []
 
 # Display app logo
 st.image("logo.jpg", width=600)
@@ -103,8 +101,8 @@ if user_input:
     elif "email" in user_input.lower():
         response = generate_email_template(user_input)
     else:
-        # Generate general conversation response
-        response = conversation.run(input=user_input)
+        # Handle identity or general conversation
+        response = identity_chain.run(input=user_input)
 
     # Add the response to session state messages
     st.session_state.messages.append({"role": "assistant", "content": response})
