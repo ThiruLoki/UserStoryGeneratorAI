@@ -73,11 +73,11 @@ def generate_email_template(prompt):
 
 def generate_general_query_response(prompt):
     """
-    Generate a response for general user queries.
+    Generate a response for general queries.
     """
     llm = OpenAI(temperature=0.7, model_name="gpt-3.5-turbo", openai_api_key=api_key)
     general_template = """
-        Provide a helpful, detailed, and informative response to the following user query:
+        Respond thoughtfully to the following query:
         {query}
     """
     chain = LLMChain(
@@ -89,21 +89,15 @@ def generate_general_query_response(prompt):
 
 def detect_response_type(prompt):
     """
-    Detect the type of response based on keywords or general input structure.
+    Detect the type of response based on keywords.
     """
     keywords_user_story = ["user story", "acceptance criteria", "feature", "As a", "so that"]
     keywords_email = ["email", "subject", "greeting", "template"]
-    casual_keywords = ["hello", "hi", "hey", "how are you", "what's up", "greetings"]
-    identity_keywords = ["who are you", "what is your name", "identify yourself"]
 
     if any(keyword in prompt.lower() for keyword in keywords_user_story):
         return "User Story"
     elif any(keyword in prompt.lower() for keyword in keywords_email):
         return "Email Template"
-    elif any(keyword in prompt.lower() for keyword in casual_keywords):
-        return "Casual"
-    elif any(keyword in prompt.lower() for keyword in identity_keywords):
-        return "Identity"
     return "General"
 
 def generate_response(prompt, response_type):
@@ -114,17 +108,9 @@ def generate_response(prompt, response_type):
         return generate_precise_user_story(prompt)
     elif response_type == "Email Template":
         return generate_email_template(prompt)
-    elif response_type == "Casual":
-        return "Hello! How can I assist you today? 😊"
-    elif response_type == "Identity":
-        return "I am BA Genie, your personal assistant for generating user stories, email templates, and answering your questions."
-    elif response_type == "General":
-        return ("I can do quite a lot! As BA Genie, I specialize in helping you generate detailed user stories, "
-                "email templates, and insightful responses to general questions. I can also assist with brainstorming ideas, "
-                "explaining concepts, and guiding you on technical or professional topics. Let me know how I can help!")
     else:
-        return "I'm here to help! Could you clarify your request, or let me know what you need assistance with?"
-
+        # For all other queries, use a general-purpose prompt
+        return generate_general_query_response(prompt)
 
 def save_as_word(content, filename):
     """
