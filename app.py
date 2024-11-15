@@ -119,9 +119,12 @@ def generate_response(prompt, response_type):
     elif response_type == "Identity":
         return "I am BA Genie, your personal assistant for generating user stories, email templates, and answering your questions."
     elif response_type == "General":
-        return generate_general_query_response(prompt)
+        return ("I can do quite a lot! As BA Genie, I specialize in helping you generate detailed user stories, "
+                "email templates, and insightful responses to general questions. I can also assist with brainstorming ideas, "
+                "explaining concepts, and guiding you on technical or professional topics. Let me know how I can help!")
     else:
         return "I'm here to help! Could you clarify your request, or let me know what you need assistance with?"
+
 
 def save_as_word(content, filename):
     """
