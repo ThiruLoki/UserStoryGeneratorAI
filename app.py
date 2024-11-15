@@ -3,23 +3,24 @@ from langchain.prompts import PromptTemplate
 from langchain.llms import OpenAI
 from langchain.chains import LLMChain
 from docx import Document
-import os
 
+# Load API key from Streamlit secrets
 api_key = st.secrets["OPENAI_API_KEY"]
 
+# Display the app logo
+st.image("logo.jpg", width=600)
 
-st.image("logo.jpg", width=600)  
-#st.title('BA Genie')
-
-def generate_precise_user_story(prompt, brd_content=None):
-    
+def generate_precise_user_story(prompt):
+    """
+    Generate a user story based on the input prompt.
+    """
     if "existing customer" in prompt.lower() or "login" in prompt.lower():
         user_role = "existing customer"
     elif "new customer" in prompt.lower() or "sign up" in prompt.lower():
         user_role = "new customer"
     else:
         user_role = "user"  # Default to a generic "user" if no specific role is detected
-    
+
     llm = OpenAI(temperature=0.5, model_name="gpt-3.5-turbo", openai_api_key=api_key)
     user_story_template = """
         Generate a detailed user story with the following format:
@@ -35,12 +36,11 @@ def generate_precise_user_story(prompt, brd_content=None):
         6. Access Control: Users must log in before accessing any account-related features.
         7. Responsive Design: Ensure login works seamlessly on both desktop and mobile.
         8. Security Measures: Implement CAPTCHA after multiple login attempts, and ensure secure password handling.
-        """
-    
+    """
     chain = LLMChain(
-        llm=llm, 
+        llm=llm,
         prompt=PromptTemplate(
-            input_variables=["feature_name", "title", "user", "feature", "goal"], 
+            input_variables=["feature_name", "title", "user", "feature", "goal"],
             template=user_story_template
         )
     )
@@ -56,58 +56,86 @@ def generate_precise_user_story(prompt, brd_content=None):
     return user_story.strip()
 
 def generate_email_template(prompt):
+    """
+    Generate an email template based on the input prompt.
+    """
     llm = OpenAI(temperature=0.5, model_name="gpt-3.5-turbo", openai_api_key=api_key)
     email_template = """
         Write a formal email based on the following details:
         {details}
-        """
-    
-    chain = LLMChain(llm=llm, prompt=PromptTemplate(input_variables=["details"], template=email_template))
+    """
+    chain = LLMChain(
+        llm=llm,
+        prompt=PromptTemplate(input_variables=["details"], template=email_template)
+    )
     email_response = chain.run({"details": prompt})
     return email_response.strip()
 
 def detect_response_type(prompt):
+    """
+    Detect the type of response based on keywords or general input structure.
+    """
     keywords_user_story = ["user story", "acceptance criteria", "feature", "As a", "so that"]
     keywords_email = ["email", "subject", "greeting", "template"]
+    keywords_flowchart = ["flow chart", "diagram", "process", "flow"]
+    casual_keywords = ["hello", "hi", "hey", "how are you", "what's up", "greetings"]
+
     if any(keyword in prompt.lower() for keyword in keywords_user_story):
         return "User Story"
     elif any(keyword in prompt.lower() for keyword in keywords_email):
-        return "Email Template"# Detect user role based on prompt keywords
-    return "User Story"
+        return "Email Template"
+    elif any(keyword in prompt.lower() for keyword in keywords_flowchart):
+        return "Flow Chart"
+    elif any(keyword in prompt.lower() for keyword in casual_keywords):
+        return "Casual"
+    return "General"
+
+def generate_response(prompt, response_type):
+    """
+    Generate a response based on the detected response type.
+    """
+    if response_type == "User Story":
+        return generate_precise_user_story(prompt)
+    elif response_type == "Email Template":
+        return generate_email_template(prompt)
+    elif response_type == "Flow Chart":
+        return "Sure, I can create a flowchart for the process you've described. Please provide more details."
+    elif response_type == "Casual":
+        return "Hello! How can I assist you today? 😊"
+    else:
+        return "I'm here to help! Could you clarify your request, or let me know what you need assistance with?"
 
 def save_as_word(content, filename):
+    """
+    Save the generated response as a Word document.
+    """
     doc = Document()
     doc.add_paragraph(content)
     doc.save(filename)
 
-def is_valid_input(prompt):
-    if len(prompt) < 10:
-        return False
-    keywords_user_story = ["user story", "acceptance criteria", "feature", "As a", "so that"]
-    keywords_email = ["email", "subject", "greeting", "template"]
-    return any(keyword in prompt.lower() for keyword in keywords_user_story + keywords_email)
-
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
+# Capture user input
 user_input = st.chat_input("Type your requirement here...")
 
 if user_input:
     st.session_state.messages.append({"role": "user", "content": user_input})
-    if is_valid_input(user_input):
-        response_type = detect_response_type(user_input)
-        response = generate_precise_user_story(user_input) if response_type == "User Story" else generate_email_template(user_input)
-        st.session_state.messages.append({"role": "assistant", "content": response})
-    else:
-        st.session_state.messages.append({"role": "assistant", "content": "Please provide a more detailed requirement, such as a user story or email template request."})
+    
+    # Detect response type and generate the response
+    response_type = detect_response_type(user_input)
+    response = generate_response(user_input, response_type)
+    st.session_state.messages.append({"role": "assistant", "content": response})
 
+# Display chat messages
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
+# Offer file download options for the last response
 if len(st.session_state.messages) > 0:
     last_response = st.session_state.messages[-1]["content"]
     st.download_button(f"Download Last Response as Text", last_response, file_name="response.txt", mime='text/plain')
     save_as_word(last_response, "response.docx")
     with open("response.docx", "rb") as docx_file:
-        st.download_button(f"Download Last Response as Word", docx_file, file_name="response.docx", mime='application/vnd.openxmlformats-officedocument.wordprocessingml.document')
+        st.download_button(f"Download Last Response as Word", docx_file, file_name="response.docx", mime='application/vnd.openxmlformats-officedocument.wordprocessingml.document")
