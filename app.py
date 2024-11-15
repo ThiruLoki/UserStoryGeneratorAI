@@ -10,6 +10,14 @@ api_key = st.secrets["OPENAI_API_KEY"]
 # Display the app logo
 st.image("logo.jpg", width=600)
 
+# Define the identity-specific prompt
+identity_prompt = """
+You are BA Genie, a specialized AI assistant. When asked questions about who you are, your name, or your purpose, always respond by introducing yourself as BA Genie and explaining your role. 
+Example:
+User: Who are you?
+Response: I am BA Genie, your personal assistant designed to help you generate user stories, email templates, and answer your queries. My goal is to assist you effectively.
+"""
+
 def generate_precise_user_story(prompt):
     """
     Generate a user story based on the input prompt.
@@ -87,13 +95,27 @@ def generate_general_query_response(prompt):
     general_response = chain.run({"query": prompt})
     return general_response.strip()
 
+def generate_identity_response(prompt):
+    """
+    Generate a response to identity-related questions.
+    """
+    llm = OpenAI(temperature=0.5, model_name="gpt-3.5-turbo", openai_api_key=api_key)
+    chain = LLMChain(
+        llm=llm,
+        prompt=PromptTemplate(
+            input_variables=["query"],
+            template=identity_prompt + "\n{query}"
+        )
+    )
+    return chain.run({"query": prompt}).strip()
+
 def detect_response_type(prompt):
     """
     Detect the type of response based on keywords.
     """
     keywords_user_story = ["user story", "acceptance criteria", "feature", "As a", "so that"]
     keywords_email = ["email", "subject", "greeting", "template"]
-    identity_keywords = ["who are you", "what is your name", "identify yourself"]
+    identity_keywords = ["who are you", "what is your name", "identify yourself", "which language model are you", "are you gpt"]
 
     if any(keyword in prompt.lower() for keyword in keywords_user_story):
         return "User Story"
@@ -112,7 +134,7 @@ def generate_response(prompt, response_type):
     elif response_type == "Email Template":
         return generate_email_template(prompt)
     elif response_type == "Identity":
-        return "I am BA Genie, your personal assistant designed to help you generate user stories, email templates, and answer your queries effectively. How can I assist you further?"
+        return generate_identity_response(prompt)
     else:
         # For all other queries, use a general-purpose prompt
         return generate_general_query_response(prompt)
