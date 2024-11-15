@@ -2,10 +2,19 @@ import streamlit as st
 from langchain.chains import ConversationChain
 from langchain.llms import OpenAI
 from langchain.memory import ConversationBufferMemory
+from langchain.prompts import PromptTemplate
 from docx import Document
 
 # Load API key from Streamlit secrets
 api_key = st.secrets["OPENAI_API_KEY"]
+
+# Define custom identity prompt
+identity_prompt_template = """
+You are BA Genie, a specialized AI assistant. When asked questions about who you are, your name, or your purpose, always respond by introducing yourself as BA Genie. 
+Example:
+User: Who are you?
+Response: I am BA Genie, your personal assistant designed to help you generate user stories, email templates, and answer your queries. My goal is to assist you effectively.
+"""
 
 # Initialize memory with the correct key for ConversationChain
 memory = ConversationBufferMemory(memory_key="history", return_messages=True)
@@ -14,11 +23,59 @@ memory = ConversationBufferMemory(memory_key="history", return_messages=True)
 conversation = ConversationChain(
     llm=OpenAI(model_name="gpt-3.5-turbo", openai_api_key=api_key),
     memory=memory,
+    prompt=PromptTemplate(template=identity_prompt_template, input_variables=["history", "input"]),
 )
 
 # Initialize session state for messages
 if "messages" not in st.session_state:
     st.session_state.messages = []
+
+# Functions for User Story and Email Template generation
+def generate_precise_user_story(prompt):
+    """
+    Generate a user story based on the input prompt.
+    """
+    llm = OpenAI(temperature=0.5, model_name="gpt-3.5-turbo", openai_api_key=api_key)
+    user_story_template = """
+    Generate a detailed user story with the following format:
+    Title: {title}
+    As a {user}, I want to {feature}, so that {goal}.
+    Acceptance Criteria:
+    1. Clearly state the conditions for success.
+    2. Define edge cases to consider.
+    """
+    chain = ConversationChain(
+        llm=llm,
+        prompt=PromptTemplate(
+            input_variables=["title", "user", "feature", "goal"],
+            template=user_story_template,
+        ),
+    )
+    user_story = chain.run(
+        title="E-commerce User Login",
+        user="customer",
+        feature="log into my account",
+        goal="access my purchase history",
+    )
+    return user_story.strip()
+
+
+def generate_email_template(prompt):
+    """
+    Generate an email template based on the input prompt.
+    """
+    llm = OpenAI(temperature=0.5, model_name="gpt-3.5-turbo", openai_api_key=api_key)
+    email_template = """
+    Write a professional email based on the following details:
+    {details}
+    """
+    chain = ConversationChain(
+        llm=llm,
+        prompt=PromptTemplate(input_variables=["details"], template=email_template),
+    )
+    email = chain.run(details=prompt)
+    return email.strip()
+
 
 # Display app logo
 st.image("logo.jpg", width=600)
@@ -30,8 +87,14 @@ if user_input:
     # Add user input to session state messages
     st.session_state.messages.append({"role": "user", "content": user_input})
 
-    # Generate a response using the conversation chain
-    response = conversation.run(input=user_input)
+    # Generate a response based on the input type
+    if "user story" in user_input.lower():
+        response = generate_precise_user_story(user_input)
+    elif "email" in user_input.lower():
+        response = generate_email_template(user_input)
+    else:
+        # Generate general conversation response
+        response = conversation.run(input=user_input)
 
     # Add the response to session state messages
     st.session_state.messages.append({"role": "assistant", "content": response})
