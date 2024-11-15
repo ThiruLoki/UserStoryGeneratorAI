@@ -135,7 +135,17 @@ for message in st.session_state.messages:
 # Offer file download options for the last response
 if len(st.session_state.messages) > 0:
     last_response = st.session_state.messages[-1]["content"]
-    st.download_button(f"Download Last Response as Text", last_response, file_name="response.txt", mime='text/plain')
+    st.download_button(
+        label="Download Last Response as Text", 
+        data=last_response, 
+        file_name="response.txt", 
+        mime="text/plain"
+    )
     save_as_word(last_response, "response.docx")
     with open("response.docx", "rb") as docx_file:
-        st.download_button(f"Download Last Response as Word", docx_file, file_name="response.docx", mime='application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+        st.download_button(
+            label="Download Last Response as Word",
+            data=docx_file,
+            file_name="response.docx",
+            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        )
