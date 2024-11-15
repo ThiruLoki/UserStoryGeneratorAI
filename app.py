@@ -8,8 +8,8 @@ from docx import Document
 # Load API key from Streamlit secrets
 api_key = st.secrets["OPENAI_API_KEY"]
 
-# Define custom identity prompt
-identity_prompt_template = """
+# Define a custom identity prompt
+identity_prompt = """
 You are BA Genie, a specialized AI assistant. When asked questions about who you are, your name, or your purpose, always respond by introducing yourself as BA Genie. 
 Example:
 User: Who are you?
@@ -19,11 +19,14 @@ Response: I am BA Genie, your personal assistant designed to help you generate u
 # Initialize memory with the correct key for ConversationChain
 memory = ConversationBufferMemory(memory_key="history", return_messages=True)
 
-# Initialize conversation chain with memory
+# Initialize conversation chain with memory and custom identity prompt
 conversation = ConversationChain(
     llm=OpenAI(model_name="gpt-3.5-turbo", openai_api_key=api_key),
     memory=memory,
-    prompt=PromptTemplate(template=identity_prompt_template, input_variables=["history", "input"]),
+    prompt=PromptTemplate(
+        template=identity_prompt,
+        input_variables=["history", "input"]
+    ),
 )
 
 # Initialize session state for messages
@@ -35,8 +38,7 @@ def generate_precise_user_story(prompt):
     """
     Generate a user story based on the input prompt.
     """
-    llm = OpenAI(temperature=0.5, model_name="gpt-3.5-turbo", openai_api_key=api_key)
-    user_story_template = """
+    user_story_prompt = """
     Generate a detailed user story with the following format:
     Title: {title}
     As a {user}, I want to {feature}, so that {goal}.
@@ -44,37 +46,41 @@ def generate_precise_user_story(prompt):
     1. Clearly state the conditions for success.
     2. Define edge cases to consider.
     """
+    llm = OpenAI(model_name="gpt-3.5-turbo", openai_api_key=api_key)
     chain = ConversationChain(
         llm=llm,
         prompt=PromptTemplate(
+            template=user_story_prompt,
             input_variables=["title", "user", "feature", "goal"],
-            template=user_story_template,
         ),
     )
-    user_story = chain.run(
-        title="E-commerce User Login",
-        user="customer",
-        feature="log into my account",
-        goal="access my purchase history",
-    )
-    return user_story.strip()
+    return chain.run(
+        {
+            "title": "E-commerce User Login",
+            "user": "customer",
+            "feature": "log into my account",
+            "goal": "access my purchase history",
+        }
+    ).strip()
 
 
 def generate_email_template(prompt):
     """
     Generate an email template based on the input prompt.
     """
-    llm = OpenAI(temperature=0.5, model_name="gpt-3.5-turbo", openai_api_key=api_key)
-    email_template = """
+    email_template_prompt = """
     Write a professional email based on the following details:
     {details}
     """
+    llm = OpenAI(model_name="gpt-3.5-turbo", openai_api_key=api_key)
     chain = ConversationChain(
         llm=llm,
-        prompt=PromptTemplate(input_variables=["details"], template=email_template),
+        prompt=PromptTemplate(
+            template=email_template_prompt,
+            input_variables=["details"],
+        ),
     )
-    email = chain.run(details=prompt)
-    return email.strip()
+    return chain.run({"details": prompt}).strip()
 
 
 # Display app logo
@@ -110,10 +116,10 @@ if len(st.session_state.messages) > 0:
 
     # Download as Text
     st.download_button(
-        label="Download Last Response as Text", 
-        data=last_response, 
-        file_name="response.txt", 
-        mime="text/plain"
+        label="Download Last Response as Text",
+        data=last_response,
+        file_name="response.txt",
+        mime="text/plain",
     )
 
     # Download as Word document
@@ -128,5 +134,5 @@ if len(st.session_state.messages) > 0:
             label="Download Last Response as Word",
             data=docx_file,
             file_name="response.docx",
-            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         )
