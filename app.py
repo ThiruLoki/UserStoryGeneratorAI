@@ -107,8 +107,6 @@ if "messages" not in st.session_state:
 
 # Header Section
 st.image("logo.jpg", width=600)
-
-
 # Chat Message Input and Display
 st.markdown('<div class="chat-container">', unsafe_allow_html=True)
 for message in st.session_state.messages:
