@@ -2,15 +2,16 @@ import streamlit as st
 import boto3
 import json
 from docx import Document
+from io import BytesIO
 
 # Bedrock Configuration
 class BedrockConfig:
-    MODEL_ID = "amazon.titan-text-premier-v1:0"
+    MODEL_ID = "amazon.titan-text-premier-v1:0"  # Adjust model ID as per your Bedrock setup
+    AWS_REGION = st.secrets["AWS_REGION"]
     AWS_ACCESS_KEY_ID = st.secrets["AWS_ACCESS_KEY_ID"]
     AWS_SECRET_ACCESS_KEY = st.secrets["AWS_SECRET_ACCESS_KEY"]
-    AWS_REGION = st.secrets["AWS_REGION"]
 
-# Initialize Bedrock Client
+# Initialize Bedrock client
 def get_bedrock_client():
     return boto3.client(
         "bedrock",
@@ -19,85 +20,59 @@ def get_bedrock_client():
         aws_secret_access_key=BedrockConfig.AWS_SECRET_ACCESS_KEY,
     )
 
-# Generate Precise User Story
-def generate_precise_user_story(prompt, user_role="user"):
-    template = f"""
-    Generate a detailed user story for an e-commerce website.
-    Title: {user_role.capitalize()} Login to Access Profile
-    As an {user_role}, I want to {"log into the e-commerce website" if user_role == "existing customer" else "sign up for an account"}, so that {"I can access my profile and manage my account details" if user_role == "existing customer" else "I can create a new account and start shopping"}.
-    Include acceptance criteria, input validation, session management, and security measures.
-    """
+# Generate content using Bedrock
+def generate_content(prompt, task):
     client = get_bedrock_client()
+    task_prompt = f"{task}: {prompt}"
+    
     response = client.invoke_model(
         modelId=BedrockConfig.MODEL_ID,
-        body=json.dumps({"inputText": template}),
+        body=json.dumps({"inputText": task_prompt}),
         accept="application/json",
         contentType="application/json",
     )
-    output = json.loads(response["body"].read())
-    return output["results"]
+    response_body = json.loads(response["body"].read())
+    return response_body["results"]
 
-# Generate Email Template
-def generate_email_template(prompt):
-    template = f"""
-    Write a professional email based on the following details:
-    {prompt}
-    """
-    client = get_bedrock_client()
-    response = client.invoke_model(
-        modelId=BedrockConfig.MODEL_ID,
-        body=json.dumps({"inputText": template}),
-        accept="application/json",
-        contentType="application/json",
-    )
-    output = json.loads(response["body"].read())
-    return output["results"]
-
-# Save Content as Word Document
-def save_as_word(content, filename):
+# Save content as a Word document
+def save_as_word(content):
     doc = Document()
     doc.add_paragraph(content)
-    doc.save(filename)
+    buffer = BytesIO()
+    doc.save(buffer)
+    buffer.seek(0)
+    return buffer
 
-# Input Validation
-def is_valid_input(prompt):
-    return len(prompt) >= 10
+# Streamlit UI
+st.title("AI-Powered Writing Assistant (Bedrock)")
 
-# Streamlit App
-st.image("logo.jpg", width=600)
-st.title("BA Genie")
+# Sidebar for task selection
+task = st.sidebar.selectbox("Choose a task", ["Grammar Check", "Paraphrase", "Summarize", "Generate User Story", "Generate Email"])
 
-if "messages" not in st.session_state:
-    st.session_state.messages = []
+# Text input area
+user_input = st.text_area("Enter your text here:")
 
-# Chat Input
-user_input = st.chat_input("Type your requirement here...")
+if st.button("Generate"):
+    if user_input:
+        # Generate content based on selected task
+        result = generate_content(user_input, task)
+        st.subheader("Generated Content")
+        st.write(result)
 
-if user_input:
-    st.session_state.messages.append({"role": "user", "content": user_input})
-    
-    if is_valid_input(user_input):
-        # Determine response type
-        if "user story" in user_input.lower():
-            response = generate_precise_user_story(user_input, user_role="existing customer")
-        elif "email" in user_input.lower():
-            response = generate_email_template(user_input)
-        else:
-            response = "I can assist with user stories or email templates. Please provide a valid input."
-        
-        st.session_state.messages.append({"role": "assistant", "content": response})
+        # Provide download options
+        st.download_button(
+            label="Download as Text",
+            data=result,
+            file_name="output.txt",
+            mime="text/plain",
+        )
+
+        word_file = save_as_word(result)
+        st.download_button(
+            label="Download as Word",
+            data=word_file,
+            file_name="output.docx",
+            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        )
     else:
-        st.session_state.messages.append({"role": "assistant", "content": "Input must be at least 10 characters long."})
-
-# Display Chat Messages
-for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
-        st.markdown(message["content"])
-
-# Download Buttons for Last Response
-if len(st.session_state.messages) > 0:
-    last_response = st.session_state.messages[-1]["content"]
-    st.download_button("Download Last Response as Text", last_response, file_name="response.txt", mime="text/plain")
-    save_as_word(last_response, "response.docx")
-    with open("response.docx", "rb") as docx_file:
-        st.download_button("Download Last Response as Word", docx_file, file_name="response.docx", mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+        st.warning("Please enter some text to proceed.")
