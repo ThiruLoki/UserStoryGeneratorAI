@@ -21,12 +21,11 @@ def get_bedrock_client():
     )
 
 # Generate content using Bedrock
-def generate_content(prompt, task):
+def generate_content(prompt):
     """
     Sends the input prompt to the Bedrock model and retrieves the output text.
     """
     client = get_bedrock_client()
-    task_prompt = f"{task}: {prompt}"  # Task-specific prompt formatting
 
     try:
         # Invoke the model through Bedrock
@@ -34,16 +33,13 @@ def generate_content(prompt, task):
             modelId=BedrockConfig.MODEL_ID,
             contentType="application/json",
             accept="application/json",
-            body=json.dumps({"inputText": task_prompt}),
+            body=json.dumps({"inputText": prompt}),
         )
         
         # Parse the response body
         response_body = json.loads(response["body"].read().decode("utf-8"))
-        
-        # Debugging: Log the raw response to Streamlit for troubleshooting
-        st.write("Raw Bedrock Response:", response_body)
 
-        # Extract the outputText from the results
+        # Extract the outputText from the results field
         if (
             "results" in response_body
             and isinstance(response_body["results"], list)
@@ -52,30 +48,9 @@ def generate_content(prompt, task):
             output_text = response_body["results"][0].get("outputText", "No output text found.")
             return output_text.strip()  # Clean up extra spaces/newlines
         else:
-            return "Error: No valid output from Bedrock."
+            return "Sorry, I couldn't process your request. Please try again."
     except Exception as e:
         return f"Error invoking Bedrock: {str(e)}"
-
-# Generate content with fallback templates
-def generate_content_with_fallback(prompt, task):
-    """
-    Sends the input prompt to Bedrock and provides fallback content if the response is invalid.
-    """
-    predefined_templates = {
-        "Grammar Check": "I couldn't process the request. Please ensure the input text is clear.",
-        "Paraphrase": "I couldn't paraphrase the text. Try rephrasing your input.",
-        "Summarize": "I couldn't summarize the content. Please provide a clearer context.",
-        "Generate User Story": "Here is a basic user story: As a user, I want to perform a specific action, so that I can achieve a specific goal.",
-        "Generate Email": "Here is a generic email template: Dear [Recipient], I hope this message finds you well. [Add details]. Best regards, [Your Name].",
-    }
-
-    # Attempt to generate content using Bedrock
-    response = generate_content(prompt, task)
-
-    # If the response contains an error or is empty, return the fallback template
-    if response.startswith("Error") or response.strip() == "":
-        return predefined_templates.get(task, "Sorry, I couldn't generate the requested content.")
-    return response
 
 # Save content as a Word document
 def save_as_word(content):
@@ -92,62 +67,54 @@ def save_as_word(content):
 # Streamlit App Configuration
 st.set_page_config(page_title="BA Genie", page_icon="🤖", layout="wide")
 
+# Initialize session state for messages
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+
 # Header Section
-st.image("logo.jpg", width=600)  # Replace with your logo path
 st.title("🤖 BA Genie")
 st.markdown("""
-Welcome to **BA Genie**, your AI-powered assistant for generating:
-- 📖 **User Stories** 
-- 📧 **Email Templates**
-- ✍️ **Grammarly-like Writing Enhancements** 
-- 📝 **Content Summaries and Paraphrasing**
+Welcome to **BA Genie**, your conversational assistant for:
+- 📖 User Stories
+- 📧 Email Templates
+- ✍️ Writing Enhancements
+- 📝 Summaries and Paraphrasing
 """)
 
-# Sidebar Navigation
-st.sidebar.header("Navigation")
-task = st.sidebar.selectbox(
-    "Choose a task",
-    ["Grammar Check", "Paraphrase", "Summarize", "Generate User Story", "Generate Email"]
-)
-st.sidebar.write("Select a task to begin. Customize your text and download the results!")
+# Chat Message Input and Display
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
 
-# Text Input Section
-st.subheader("🔍 Input Area")
-user_input = st.text_area(
-    "Type or paste your content here:",
-    placeholder="Enter your text, user story description, or email content...",
-    height=200
-)
+# User Input Area
+user_input = st.chat_input("Type your request here...")
 
-# Generate Button
-if st.button("Generate"):
-    if user_input:
-        # Dynamically generate content based on task with fallback
-        result = generate_content_with_fallback(user_input, task)
-        
-        # Display the generated or fallback content
-        st.subheader("✨ Generated Output")
-        st.write(result)
+if user_input:
+    # Save user message to session state
+    st.session_state.messages.append({"role": "user", "content": user_input})
+    with st.chat_message("user"):
+        st.markdown(user_input)
 
-        # Allow downloads
+    # Generate response
+    with st.chat_message("assistant"):
+        with st.spinner("Generating response..."):
+            response = generate_content(user_input)
+        st.markdown(response)
+        # Save assistant response to session state
+        st.session_state.messages.append({"role": "assistant", "content": response})
+
+        # Download Options
+        st.markdown("#### 📥 Download Your Result")
         st.download_button(
             label="Download as Text File",
-            data=result,
-            file_name="output.txt",
+            data=response,
+            file_name="response.txt",
             mime="text/plain"
         )
-        word_file = save_as_word(result)
+        word_file = save_as_word(response)
         st.download_button(
             label="Download as Word File",
             data=word_file,
-            file_name="output.docx",
+            file_name="response.docx",
             mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
         )
-    else:
-        st.warning("⚠️ Please enter text to generate results.")
-else:
-    st.info("👈 Select a task and input text to get started.")
-
-# Footer Section
-st.markdown("---")
-st.markdown("© 2024 BA Genie - Powered by Amazon Bedrock and Streamlit")
