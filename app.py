@@ -25,23 +25,30 @@ def generate_content(prompt, task):
     client = get_bedrock_client()
     task_prompt = f"{task}: {prompt}"  # Format the prompt based on the task
 
-    # Invoke the model through Bedrock
-    response = client.invoke_model(
-        modelId=BedrockConfig.MODEL_ID,
-        contentType="application/json",
-        accept="application/json",
-        body=json.dumps({"inputText": task_prompt}),
-    )
-    
-    # Parse the response body
-    response_body = json.loads(response["body"].read().decode("utf-8"))
-    
-    # Extract the "outputText" field from the first result
-    if isinstance(response_body, list) and len(response_body) > 0:
-        output_text = response_body[0].get("outputText", "No output text found.")
-        return output_text
-    else:
-        return "Error: No valid response from Bedrock."
+    try:
+        # Invoke the model through Bedrock
+        response = client.invoke_model(
+            modelId=BedrockConfig.MODEL_ID,
+            contentType="application/json",
+            accept="application/json",
+            body=json.dumps({"inputText": task_prompt}),
+        )
+        
+        # Parse the response body
+        response_body = json.loads(response["body"].read().decode("utf-8"))
+        
+        # Debugging: Print the raw response for inspection
+        st.write("Raw Bedrock Response:", response_body)
+
+        # Extract the "outputText" field from the first result
+        if isinstance(response_body, list) and len(response_body) > 0:
+            output_text = response_body[0].get("outputText", "No output text found.")
+            return output_text
+        else:
+            return "Error: No valid response from Bedrock."
+    except Exception as e:
+        return f"Error invoking Bedrock: {str(e)}"
+
 
 
 # Save content as a Word document
