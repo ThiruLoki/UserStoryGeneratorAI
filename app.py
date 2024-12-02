@@ -40,14 +40,15 @@ def generate_content(prompt, task):
         # Debugging: Print the raw response for inspection
         st.write("Raw Bedrock Response:", response_body)
 
-        # Extract the "outputText" field from the first result
-        if isinstance(response_body, list) and len(response_body) > 0:
-            output_text = response_body[0].get("outputText", "No output text found.")
+        # Extract the outputText from the results field
+        if "results" in response_body and isinstance(response_body["results"], list) and len(response_body["results"]) > 0:
+            output_text = response_body["results"][0].get("outputText", "No output text found.")
             return output_text
         else:
-            return "Error: No valid response from Bedrock."
+            return "Error: No valid output from Bedrock."
     except Exception as e:
         return f"Error invoking Bedrock: {str(e)}"
+
 
 
 
