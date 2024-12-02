@@ -22,8 +22,11 @@ def get_bedrock_client():
 
 # Generate content using Bedrock
 def generate_content(prompt, task):
+    """
+    Sends the input prompt to the Bedrock model and retrieves the output text.
+    """
     client = get_bedrock_client()
-    task_prompt = f"{task}: {prompt}"  # Format the prompt based on the task
+    task_prompt = f"{task}: {prompt}"  # Task-specific prompt formatting
 
     try:
         # Invoke the model through Bedrock
@@ -37,28 +40,48 @@ def generate_content(prompt, task):
         # Parse the response body
         response_body = json.loads(response["body"].read().decode("utf-8"))
         
-        # Debugging: Print the raw response for inspection
+        # Debugging: Log the raw response to Streamlit for troubleshooting
         st.write("Raw Bedrock Response:", response_body)
 
-        # Extract the outputText from the results field
+        # Extract the outputText from the results
         if (
-            "results" in response_body and
-            isinstance(response_body["results"], list) and
-            len(response_body["results"]) > 0
+            "results" in response_body
+            and isinstance(response_body["results"], list)
+            and len(response_body["results"]) > 0
         ):
             output_text = response_body["results"][0].get("outputText", "No output text found.")
-            return output_text
+            return output_text.strip()  # Clean up extra spaces/newlines
         else:
             return "Error: No valid output from Bedrock."
     except Exception as e:
         return f"Error invoking Bedrock: {str(e)}"
 
+# Generate content with fallback templates
+def generate_content_with_fallback(prompt, task):
+    """
+    Sends the input prompt to Bedrock and provides fallback content if the response is invalid.
+    """
+    predefined_templates = {
+        "Grammar Check": "I couldn't process the request. Please ensure the input text is clear.",
+        "Paraphrase": "I couldn't paraphrase the text. Try rephrasing your input.",
+        "Summarize": "I couldn't summarize the content. Please provide a clearer context.",
+        "Generate User Story": "Here is a basic user story: As a user, I want to perform a specific action, so that I can achieve a specific goal.",
+        "Generate Email": "Here is a generic email template: Dear [Recipient], I hope this message finds you well. [Add details]. Best regards, [Your Name].",
+    }
 
+    # Attempt to generate content using Bedrock
+    response = generate_content(prompt, task)
 
-
+    # If the response contains an error or is empty, return the fallback template
+    if response.startswith("Error") or response.strip() == "":
+        return predefined_templates.get(task, "Sorry, I couldn't generate the requested content.")
+    return response
 
 # Save content as a Word document
 def save_as_word(content):
+    """
+    Saves the generated content to a Word document.
+    """
     doc = Document()
     doc.add_paragraph(content)
     buffer = BytesIO()
@@ -99,29 +122,27 @@ user_input = st.text_area(
 # Generate Button
 if st.button("Generate"):
     if user_input:
-        # Dynamically generate content based on task
-        try:
-            result = generate_content(user_input, task)
-            st.subheader("✨ Generated Output")
-            st.write(result)
+        # Dynamically generate content based on task with fallback
+        result = generate_content_with_fallback(user_input, task)
+        
+        # Display the generated or fallback content
+        st.subheader("✨ Generated Output")
+        st.write(result)
 
-            # Download Options
-            st.markdown("#### 📥 Download Your Result")
-            st.download_button(
-                label="Download as Text File",
-                data=result,
-                file_name="output.txt",
-                mime="text/plain"
-            )
-            word_file = save_as_word(result)
-            st.download_button(
-                label="Download as Word File",
-                data=word_file,
-                file_name="output.docx",
-                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-            )
-        except Exception as e:
-            st.error(f"An error occurred: {e}")
+        # Allow downloads
+        st.download_button(
+            label="Download as Text File",
+            data=result,
+            file_name="output.txt",
+            mime="text/plain"
+        )
+        word_file = save_as_word(result)
+        st.download_button(
+            label="Download as Word File",
+            data=word_file,
+            file_name="output.docx",
+            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        )
     else:
         st.warning("⚠️ Please enter text to generate results.")
 else:
