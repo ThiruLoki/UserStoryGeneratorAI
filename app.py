@@ -24,8 +24,17 @@ def get_bedrock_client():
 def generate_content(prompt):
     """
     Sends the input prompt to the Bedrock model and retrieves the output text.
+    Includes instructions for the model to identify itself as BA Genie.
     """
     client = get_bedrock_client()
+
+    # Append instruction to identify as BA Genie
+    system_instruction = (
+        "You are BA Genie, an AI-powered assistant. "
+        "Always identify yourself as BA Genie when asked about your identity. "
+        "Respond to the user's request with clarity and accuracy."
+    )
+    full_prompt = f"{system_instruction}\n\nUser: {prompt}\n\nBA Genie:"
 
     try:
         # Invoke the model through Bedrock
@@ -33,7 +42,7 @@ def generate_content(prompt):
             modelId=BedrockConfig.MODEL_ID,
             contentType="application/json",
             accept="application/json",
-            body=json.dumps({"inputText": prompt}),
+            body=json.dumps({"inputText": full_prompt}),
         )
         
         # Parse the response body
@@ -51,6 +60,7 @@ def generate_content(prompt):
             return "Sorry, I couldn't process your request. Please try again."
     except Exception as e:
         return f"Error invoking Bedrock: {str(e)}"
+
 
 # Save content as a Word document
 def save_as_word(content):
