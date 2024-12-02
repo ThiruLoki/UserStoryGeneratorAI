@@ -23,8 +23,9 @@ def get_bedrock_client():
 # Generate content using Bedrock
 def generate_content(prompt, task):
     client = get_bedrock_client()
-    task_prompt = f"{task}: {prompt}"  # Format the prompt based on task
+    task_prompt = f"{task}: {prompt}"  # Format the prompt based on the task
 
+    # Invoke the model through Bedrock
     response = client.invoke_model(
         modelId=BedrockConfig.MODEL_ID,
         contentType="application/json",
@@ -34,7 +35,14 @@ def generate_content(prompt, task):
     
     # Parse the response body
     response_body = json.loads(response["body"].read().decode("utf-8"))
-    return response_body.get("results", "Error: No output from Bedrock")
+    
+    # Extract the "outputText" field from the first result
+    if isinstance(response_body, list) and len(response_body) > 0:
+        output_text = response_body[0].get("outputText", "No output text found.")
+        return output_text
+    else:
+        return "Error: No valid response from Bedrock."
+
 
 # Save content as a Word document
 def save_as_word(content):
