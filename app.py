@@ -71,31 +71,32 @@ def save_as_word(content):
     return buffer
 
 # Streamlit App Configuration
-st.set_page_config(page_title="BA Genie", page_icon="🤖", layout="centered")
+st.set_page_config(page_title="BA Genie", page_icon="🤖", layout="wide")
 
-# Apply Custom CSS for Center Alignment
+# Apply Custom CSS for Chat Layout
 st.markdown("""
     <style>
-        .center-content {
+        .chat-container {
             display: flex;
             flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            text-align: center;
+            gap: 10px;
         }
         .chat-message {
-            width: 80%;
-            margin: auto;
-            text-align: left;
-            border-radius: 10px;
+            display: flex;
+            margin: 5px;
             padding: 10px;
-            background-color: #f4f4f4;
+            border-radius: 10px;
+            max-width: 70%;
         }
-        .chat-message.user {
+        .chat-message.user-right {
+            margin-left: auto;
             background-color: #d4e6f1;
+            text-align: right;
         }
-        .chat-message.assistant {
+        .chat-message.assistant-left {
+            margin-right: auto;
             background-color: #f9ebea;
+            text-align: left;
         }
     </style>
 """, unsafe_allow_html=True)
@@ -105,25 +106,19 @@ if "messages" not in st.session_state:
     st.session_state.messages = []
 
 # Header Section
-st.markdown('<div class="center-content">', unsafe_allow_html=True)
-st.title("🤖 BA Genie")
-st.markdown("""
-Welcome to **BA Genie**, your conversational assistant for:
-- 📖 User Stories
-- 📧 Email Templates
-- ✍️ Writing Enhancements
-- 📝 Summaries and Paraphrasing
-""")
-st.markdown('</div>', unsafe_allow_html=True)
+st.image("logo.jpg", width=600)
+
 
 # Chat Message Input and Display
+st.markdown('<div class="chat-container">', unsafe_allow_html=True)
 for message in st.session_state.messages:
-    role_class = "user" if message["role"] == "user" else "assistant"
+    role_class = "user-right" if message["role"] == "user" else "assistant-left"
     st.markdown(f"""
         <div class="chat-message {role_class}">
             {message["content"]}
         </div>
     """, unsafe_allow_html=True)
+st.markdown('</div>', unsafe_allow_html=True)
 
 # User Input Area
 user_input = st.chat_input("Type your request here...")
@@ -132,7 +127,7 @@ if user_input:
     # Save user message to session state
     st.session_state.messages.append({"role": "user", "content": user_input})
     st.markdown(f"""
-        <div class="chat-message user">
+        <div class="chat-message user-right">
             {user_input}
         </div>
     """, unsafe_allow_html=True)
@@ -141,7 +136,7 @@ if user_input:
     response = generate_content_with_context(st.session_state.messages)
     st.session_state.messages.append({"role": "assistant", "content": response})
     st.markdown(f"""
-        <div class="chat-message assistant">
+        <div class="chat-message assistant-left">
             {response}
         </div>
     """, unsafe_allow_html=True)
