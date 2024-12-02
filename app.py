@@ -6,7 +6,7 @@ from io import BytesIO
 
 # Bedrock Configuration
 class BedrockConfig:
-    MODEL_ID = "amazon.titan-text-premier-v1:0"  # Adjust based on your Bedrock model
+    ENDPOINT_NAME = st.secrets["ENDPOINT_NAME"]  # Replace with your Bedrock endpoint name
     AWS_REGION = st.secrets["AWS_REGION"]
     AWS_ACCESS_KEY_ID = st.secrets["AWS_ACCESS_KEY_ID"]
     AWS_SECRET_ACCESS_KEY = st.secrets["AWS_SECRET_ACCESS_KEY"]
@@ -14,7 +14,7 @@ class BedrockConfig:
 # Initialize Bedrock client
 def get_bedrock_client():
     return boto3.client(
-        "bedrock",
+        "sagemaker-runtime",
         region_name=BedrockConfig.AWS_REGION,
         aws_access_key_id=BedrockConfig.AWS_ACCESS_KEY_ID,
         aws_secret_access_key=BedrockConfig.AWS_SECRET_ACCESS_KEY,
@@ -25,14 +25,16 @@ def generate_content(prompt, task):
     client = get_bedrock_client()
     task_prompt = f"{task}: {prompt}"
     
-    response = client.invoke_model(
-        modelId=BedrockConfig.MODEL_ID,
-        body=json.dumps({"inputText": task_prompt}),
-        accept="application/json",
-        contentType="application/json",
+    # Invoke Bedrock endpoint
+    response = client.invoke_endpoint(
+        EndpointName=BedrockConfig.ENDPOINT_NAME,
+        ContentType="application/json",
+        Body=json.dumps({"inputText": task_prompt}),
     )
-    response_body = json.loads(response["body"].read())
-    return response_body["results"]
+    
+    # Parse response
+    response_body = json.loads(response["Body"].read())
+    return response_body.get("results", "Error: No output from Bedrock")
 
 # Save content as a Word document
 def save_as_word(content):
