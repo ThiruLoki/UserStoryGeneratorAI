@@ -6,7 +6,7 @@ from io import BytesIO
 
 # Bedrock Configuration
 class BedrockConfig:
-    MODEL_ID = "amazon.titan-text-premier-v1:0"  
+    MODEL_ID = "amazon.titan-text-premier-v1:0"  # Replace with your Bedrock model ID
     AWS_REGION = st.secrets["AWS_REGION"]
     AWS_ACCESS_KEY_ID = st.secrets["AWS_ACCESS_KEY_ID"]
     AWS_SECRET_ACCESS_KEY = st.secrets["AWS_SECRET_ACCESS_KEY"]
@@ -14,7 +14,7 @@ class BedrockConfig:
 # Initialize Bedrock client
 def get_bedrock_client():
     return boto3.client(
-        "bedrock",
+        service_name="bedrock-runtime",
         region_name=BedrockConfig.AWS_REGION,
         aws_access_key_id=BedrockConfig.AWS_ACCESS_KEY_ID,
         aws_secret_access_key=BedrockConfig.AWS_SECRET_ACCESS_KEY,
@@ -24,17 +24,16 @@ def get_bedrock_client():
 def generate_content(prompt, task):
     client = get_bedrock_client()
     task_prompt = f"{task}: {prompt}"  # Format the prompt based on task
-    
-    # Invoke the model through Bedrock
+
     response = client.invoke_model(
         modelId=BedrockConfig.MODEL_ID,
-        body=json.dumps({"inputText": task_prompt}),
-        accept="application/json",
         contentType="application/json",
+        accept="application/json",
+        body=json.dumps({"inputText": task_prompt}),
     )
     
     # Parse the response body
-    response_body = json.loads(response["body"].read())
+    response_body = json.loads(response["body"].read().decode("utf-8"))
     return response_body.get("results", "Error: No output from Bedrock")
 
 # Save content as a Word document
@@ -80,27 +79,28 @@ user_input = st.text_area(
 if st.button("Generate"):
     if user_input:
         # Dynamically generate content based on task
-        result = generate_content(user_input, task)
+        try:
+            result = generate_content(user_input, task)
+            st.subheader("✨ Generated Output")
+            st.write(result)
 
-        # Display Generated Content
-        st.subheader("✨ Generated Output")
-        st.write(result)
-
-        # Download Options
-        st.markdown("#### 📥 Download Your Result")
-        st.download_button(
-            label="Download as Text File",
-            data=result,
-            file_name="output.txt",
-            mime="text/plain"
-        )
-        word_file = save_as_word(result)
-        st.download_button(
-            label="Download as Word File",
-            data=word_file,
-            file_name="output.docx",
-            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-        )
+            # Download Options
+            st.markdown("#### 📥 Download Your Result")
+            st.download_button(
+                label="Download as Text File",
+                data=result,
+                file_name="output.txt",
+                mime="text/plain"
+            )
+            word_file = save_as_word(result)
+            st.download_button(
+                label="Download as Word File",
+                data=word_file,
+                file_name="output.docx",
+                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            )
+        except Exception as e:
+            st.error(f"An error occurred: {e}")
     else:
         st.warning("⚠️ Please enter text to generate results.")
 else:
