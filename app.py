@@ -66,7 +66,7 @@ def save_as_word(content):
 
 # Streamlit App Configuration
 st.image("logo.jpg", width=600)
-st.title("BA Genie")
+
 
 
 
@@ -75,7 +75,7 @@ if "messages" not in st.session_state:
     st.session_state.messages = []
 
 # Header Section
-st.title("🤖 BA Genie")
+
 st.markdown("""
 Welcome to **BA Genie**, your conversational assistant for:
 - 📖 User Stories
