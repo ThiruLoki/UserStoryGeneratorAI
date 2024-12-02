@@ -66,6 +66,8 @@ def save_as_word(content):
 
 # Streamlit App Configuration
 st.set_page_config(page_title="BA Genie", page_icon="🤖", layout="wide")
+st.image("logo.jpg", width=600)
+
 
 # Initialize session state for messages
 if "messages" not in st.session_state:
