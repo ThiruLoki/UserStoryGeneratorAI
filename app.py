@@ -6,7 +6,7 @@ from io import BytesIO
 
 # Bedrock Configuration
 class BedrockConfig:
-    ENDPOINT_NAME = st.secrets["ENDPOINT_NAME"]  # Replace with your Bedrock endpoint name
+    MODEL_ID = "amazon.titan-text-premier-v1:0"
     AWS_REGION = st.secrets["AWS_REGION"]
     AWS_ACCESS_KEY_ID = st.secrets["AWS_ACCESS_KEY_ID"]
     AWS_SECRET_ACCESS_KEY = st.secrets["AWS_SECRET_ACCESS_KEY"]
