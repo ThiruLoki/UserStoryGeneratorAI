@@ -127,7 +127,7 @@ if "messages" not in st.session_state:
 
 # Display the logo
 st.markdown('<div class="main-container">', unsafe_allow_html=True)
-st.image("logo.jpg", width=150)  # Adjust logo width as needed
+st.image("logo.jpg", width=600)
 
 # Chat Message Input and Display
 st.markdown('<div class="chat-container">', unsafe_allow_html=True)
