@@ -76,21 +76,21 @@ st.set_page_config(page_title="BA Genie", page_icon="🤖", layout="wide")
 # Apply Custom CSS for Chat Layout
 st.markdown("""
     <style>
-        /* Center the chat interface and content */
+        /* Center the chat interface */
         .main-container {
             display: flex;
             flex-direction: column;
-            justify-content: flex-start;
+            justify-content: center;
             align-items: center;
             text-align: center;
             height: 100vh;
-            padding: 20px;
+            gap: 20px;
         }
         .chat-container {
             display: flex;
             flex-direction: column;
             gap: 10px;
-            max-width: 600px;
+            max-width: 700px;
             width: 100%;
         }
         .chat-message {
@@ -98,7 +98,7 @@ st.markdown("""
             margin: 5px;
             padding: 10px 15px;
             border-radius: 15px;
-            max-width: 80%;
+            max-width: 60%;
             line-height: 1.5;
             font-size: 14px;
         }
@@ -114,12 +114,9 @@ st.markdown("""
             text-align: left;
             color: #333;
         }
-        .chat-message p {
-            margin: 0; 
-        }
         .chat-input-container {
             width: 100%;
-            max-width: 600px;
+            max-width: 700px;
         }
     </style>
 """, unsafe_allow_html=True)
@@ -138,7 +135,7 @@ for message in st.session_state.messages:
     role_class = "user-right" if message["role"] == "user" else "assistant-left"
     st.markdown(f"""
         <div class="chat-message {role_class}">
-            <p>{message["content"]}</p>
+            {message["content"]}
         </div>
     """, unsafe_allow_html=True)
 st.markdown('</div>', unsafe_allow_html=True)
@@ -151,7 +148,7 @@ if user_input:
     st.session_state.messages.append({"role": "user", "content": user_input})
     st.markdown(f"""
         <div class="chat-message user-right">
-            <p>{user_input}</p>
+            {user_input}
         </div>
     """, unsafe_allow_html=True)
 
@@ -160,7 +157,22 @@ if user_input:
     st.session_state.messages.append({"role": "assistant", "content": response})
     st.markdown(f"""
         <div class="chat-message assistant-left">
-            <p>{response}</p>
+            {response}
         </div>
     """, unsafe_allow_html=True)
+
+    # Download Options (Optional)
+    st.download_button(
+        label="Download as Text File",
+        data=response,
+        file_name="response.txt",
+        mime="text/plain"
+    )
+    word_file = save_as_word(response)
+    st.download_button(
+        label="Download as Word File",
+        data=word_file,
+        file_name="response.docx",
+        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    )
 st.markdown('</div>', unsafe_allow_html=True)
