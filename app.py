@@ -79,24 +79,37 @@ st.markdown("""
         .chat-container {
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 20px;
+            padding: 20px;
         }
         .chat-message {
             display: flex;
             margin: 5px;
-            padding: 10px;
-            border-radius: 10px;
-            max-width: 70%;
+            padding: 10px 15px;
+            border-radius: 15px;
+            max-width: 60%;
+            line-height: 1.5;
+            font-size: 14px;
         }
         .chat-message.user-right {
-            margin-left: auto;
-            background-color: #d4e6f1;
+            align-self: flex-end;
+            background-color: #d1e7ff;
             text-align: right;
+            color: #333;
         }
         .chat-message.assistant-left {
-            margin-right: auto;
-            background-color: #f9ebea;
+            align-self: flex-start;
+            background-color: #ffe8e8;
             text-align: left;
+            color: #333;
+        }
+        .chat-message p {
+            margin: 0; 
+        }
+        .chat-input-container {
+            display: flex;
+            justify-content: center;
+            margin-top: 10px;
         }
     </style>
 """, unsafe_allow_html=True)
@@ -113,7 +126,7 @@ for message in st.session_state.messages:
     role_class = "user-right" if message["role"] == "user" else "assistant-left"
     st.markdown(f"""
         <div class="chat-message {role_class}">
-            {message["content"]}
+            <p>{message["content"]}</p>
         </div>
     """, unsafe_allow_html=True)
 st.markdown('</div>', unsafe_allow_html=True)
@@ -126,7 +139,7 @@ if user_input:
     st.session_state.messages.append({"role": "user", "content": user_input})
     st.markdown(f"""
         <div class="chat-message user-right">
-            {user_input}
+            <p>{user_input}</p>
         </div>
     """, unsafe_allow_html=True)
 
@@ -135,7 +148,7 @@ if user_input:
     st.session_state.messages.append({"role": "assistant", "content": response})
     st.markdown(f"""
         <div class="chat-message assistant-left">
-            {response}
+            <p>{response}</p>
         </div>
     """, unsafe_allow_html=True)
 
