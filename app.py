@@ -6,7 +6,7 @@ from io import BytesIO
 
 # Bedrock Configuration
 class BedrockConfig:
-    MODEL_ID = "amazon.titan-text-premier-v1:0"  # Adjust model ID as per your Bedrock setup
+    MODEL_ID = "amazon.titan-text-premier-v1:0"  # Adjust based on your Bedrock model
     AWS_REGION = st.secrets["AWS_REGION"]
     AWS_ACCESS_KEY_ID = st.secrets["AWS_ACCESS_KEY_ID"]
     AWS_SECRET_ACCESS_KEY = st.secrets["AWS_SECRET_ACCESS_KEY"]
@@ -43,36 +43,66 @@ def save_as_word(content):
     buffer.seek(0)
     return buffer
 
-# Streamlit UI
-st.title("AI-Powered Writing Assistant (Bedrock)")
+# Streamlit App Configuration
+st.set_page_config(page_title="BA Genie", page_icon="🤖", layout="wide")
 
-# Sidebar for task selection
-task = st.sidebar.selectbox("Choose a task", ["Grammar Check", "Paraphrase", "Summarize", "Generate User Story", "Generate Email"])
+# Header Section
+st.image("logo.jpg", width=600)  # Replace with your logo path
+st.title("🤖 BA Genie")
+st.markdown("""
+Welcome to **BA Genie**, your AI-powered assistant for generating:
+- 📖 **User Stories** 
+- 📧 **Email Templates**
+- ✍️ **Grammarly-like Writing Enhancements** 
+- 📝 **Content Summaries and Paraphrasing**
+""")
 
-# Text input area
-user_input = st.text_area("Enter your text here:")
+# Sidebar Navigation
+st.sidebar.header("Navigation")
+task = st.sidebar.selectbox(
+    "Choose a task",
+    ["Grammar Check", "Paraphrase", "Summarize", "Generate User Story", "Generate Email"]
+)
+st.sidebar.write("Select a task to begin. Customize your text and download the results!")
 
+# Text Input Section
+st.subheader("🔍 Input Area")
+user_input = st.text_area(
+    "Type or paste your content here:",
+    placeholder="Enter your text, user story description, or email content...",
+    height=200
+)
+
+# Generate Button
 if st.button("Generate"):
     if user_input:
-        # Generate content based on selected task
+        # Dynamically generate content based on task
         result = generate_content(user_input, task)
-        st.subheader("Generated Content")
+
+        # Display Generated Content
+        st.subheader("✨ Generated Output")
         st.write(result)
 
-        # Provide download options
+        # Download Options
+        st.markdown("#### 📥 Download Your Result")
         st.download_button(
-            label="Download as Text",
+            label="Download as Text File",
             data=result,
             file_name="output.txt",
-            mime="text/plain",
+            mime="text/plain"
         )
-
         word_file = save_as_word(result)
         st.download_button(
-            label="Download as Word",
+            label="Download as Word File",
             data=word_file,
             file_name="output.docx",
-            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
         )
     else:
-        st.warning("Please enter some text to proceed.")
+        st.warning("⚠️ Please enter text to generate results.")
+else:
+    st.info("👈 Select a task and input text to get started.")
+
+# Footer Section
+st.markdown("---")
+st.markdown("© 2024 BA Genie - Powered by Amazon Bedrock and Streamlit")
