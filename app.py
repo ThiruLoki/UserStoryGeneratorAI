@@ -21,20 +21,17 @@ def get_bedrock_client():
     )
 
 # Generate content using Bedrock
-def generate_content(prompt):
+def generate_content_with_context(conversation):
     """
-    Sends the input prompt to the Bedrock model and retrieves the output text.
-    Includes instructions for the model to identify itself as BA Genie.
+    Sends the conversation history to the Bedrock model and retrieves the response.
     """
     client = get_bedrock_client()
 
-    # Append instruction to identify as BA Genie
-    system_instruction = (
-        "You are BA Genie, an AI-powered assistant. "
-        "Always identify yourself as BA Genie when asked about your identity. "
-        "Respond to the user's request with clarity and accuracy."
-    )
-    full_prompt = f"{system_instruction}\n\nUser: {prompt}\n\nBA Genie:"
+    # Format the conversation for the prompt
+    prompt = "You are BA Genie, an AI-powered assistant. Keep the conversation context and respond appropriately.\n\n"
+    for turn in conversation:
+        prompt += f"{turn['role'].capitalize()}: {turn['content']}\n"
+    prompt += "BA Genie:"
 
     try:
         # Invoke the model through Bedrock
@@ -42,7 +39,7 @@ def generate_content(prompt):
             modelId=BedrockConfig.MODEL_ID,
             contentType="application/json",
             accept="application/json",
-            body=json.dumps({"inputText": full_prompt}),
+            body=json.dumps({"inputText": prompt}),
         )
         
         # Parse the response body
@@ -61,7 +58,6 @@ def generate_content(prompt):
     except Exception as e:
         return f"Error invoking Bedrock: {str(e)}"
 
-
 # Save content as a Word document
 def save_as_word(content):
     """
@@ -75,17 +71,14 @@ def save_as_word(content):
     return buffer
 
 # Streamlit App Configuration
-st.image("logo.jpg", width=600)
+st.set_page_config(page_title="BA Genie", page_icon="🤖", layout="wide")
 
-
-
-
-# Initialize session state for messages
+# Initialize session state for conversation
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
 # Header Section
-
+st.title("🤖 BA Genie")
 st.markdown("""
 Welcome to **BA Genie**, your conversational assistant for:
 - 📖 User Stories
@@ -108,10 +101,10 @@ if user_input:
     with st.chat_message("user"):
         st.markdown(user_input)
 
-    # Generate response
+    # Generate response with context
     with st.chat_message("assistant"):
         with st.spinner("Generating response..."):
-            response = generate_content(user_input)
+            response = generate_content_with_context(st.session_state.messages)
         st.markdown(response)
         # Save assistant response to session state
         st.session_state.messages.append({"role": "assistant", "content": response})
