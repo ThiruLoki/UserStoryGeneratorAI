@@ -4,6 +4,8 @@ import json
 from docx import Document
 from io import BytesIO
 
+st.stop()
+
 # Bedrock Configuration
 class BedrockConfig:
     MODEL_ID = "amazon.titan-text-premier-v1:0"  # Replace with your Bedrock model ID
