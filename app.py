@@ -3,6 +3,7 @@ import boto3
 import json
 from docx import Document
 from io import BytesIO
+print("Application is Temporarily unavailable at this moment,pls contact administrator")
 
 st.stop()
 
