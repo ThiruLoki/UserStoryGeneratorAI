@@ -3,6 +3,7 @@ import boto3
 import json
 from docx import Document
 from io import BytesIO
+st.image("logo.jpg", width=600)  
 st.write("### Application is Temporarily unavailable at this moment.")
 st.write("#### Please contact the administrator for more details.")
 
